@@ -1,8 +1,8 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="hr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Odabir studentskog doma</title>
   <style>
     :root{
@@ -41,6 +41,7 @@
       box-shadow: var(--shadow);
       padding: 16px;
     }
+    .spacedCard{ margin-top: 16px; }
     h1{
       margin: 0 0 6px 0;
       font-size: 26px;
@@ -97,6 +98,16 @@
       border: 1px solid #ddd;
       font-weight: 700;
     }
+    .btn:focus-visible,
+    .select:focus-visible,
+    .scoreInput:focus-visible{
+      outline: 3px solid rgba(31,31,31,.22);
+      outline-offset: 2px;
+    }
+    .btn:disabled{
+      cursor: not-allowed;
+      opacity: .55;
+    }
     .status{ color: var(--muted); margin-top: 8px; min-height: 20px; }
     .winner{
       display: grid;
@@ -138,6 +149,92 @@
       font-size: 14px;
       padding: 12px 0 0 0;
     }
+    dialog{
+      width: min(1280px, calc(100% - 24px));
+      max-height: calc(100vh - 32px);
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 20px 60px rgba(0,0,0,.18);
+      color: var(--text);
+    }
+    dialog::backdrop{ background: rgba(31,31,31,.42); }
+    .scoreEditor{
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 32px);
+    }
+    .scoreEditorHeader{
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid #eee;
+    }
+    .scoreEditorHeader .sectionTitle{ margin-bottom: 4px; }
+    .scoreEditorHeader p{
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.4;
+      margin: 0;
+    }
+    .scoreTableWrap{
+      overflow: auto;
+      padding: 16px;
+    }
+    .scoreTable{
+      min-width: 1120px;
+    }
+    .scoreTable th,
+    .scoreTable td{
+      text-align: center;
+      vertical-align: middle;
+    }
+    .scoreTable th:first-child,
+    .scoreTable td:first-child{
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      width: 220px;
+      min-width: 220px;
+      text-align: left;
+      background: #fff;
+    }
+    .scoreTable thead th:first-child{
+      z-index: 2;
+      background: #faf7f9;
+    }
+    .scoreTable thead th:not(:first-child){
+      width: 100px;
+      min-width: 100px;
+      white-space: normal;
+    }
+    .scoreInput{
+      width: 64px;
+      padding: 8px 6px;
+      border: 1px solid #ddd;
+      border-radius: 9px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+      text-align: center;
+    }
+    .scoreInput:invalid{ border-color: #b42318; }
+    .scoreEditorActions{
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 12px 16px 16px;
+      border-top: 1px solid #eee;
+      background: #fff;
+    }
+    .scoreEditorActions .actions{ margin-top: 0; }
+    @media (max-width: 520px){
+      .scoreEditorActions,
+      .scoreEditorActions .actions{
+        display: grid;
+        grid-template-columns: 1fr;
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
@@ -153,13 +250,14 @@
         </p>
       </div>
 
-      <div class="card" style="margin-top:16px;">
+      <div class="card spacedCard">
         <div class="sectionTitle">Stavke</div>
         <div id="form" class="grid"></div>
 
         <div class="actions">
-          <button class="btn" id="calcBtn">Izračunaj</button>
-          <button class="btn secondary" id="resetBtn">Reset</button>
+          <button class="btn" id="calcBtn" type="button">Izračunaj</button>
+          <button class="btn secondary" id="resetBtn" type="button">Reset</button>
+          <button class="btn secondary" id="editScoresBtn" type="button">Promijeni ocjene</button>
         </div>
         <div class="status" id="status"></div>
       </div>
@@ -174,12 +272,29 @@
         </div>
       </div>
 
-      <div class="card" style="margin-top:16px;">
+      <div class="card spacedCard">
         <div class="sectionTitle">Rang-lista</div>
         <div id="tableWrap" class="empty">Rang-lista se prikaže nakon izračuna.</div>
       </div>
     </div>
   </div>
+
+  <dialog id="scoreDialog" aria-labelledby="scoreDialogTitle">
+    <div class="scoreEditor">
+      <div class="scoreEditorHeader">
+        <div class="sectionTitle" id="scoreDialogTitle">Ocjene studentskih domova</div>
+        <p>Prilagodi ocjene od 1 do 5. Spremljene ocjene ostat će sačuvane u ovom pregledniku.</p>
+      </div>
+      <div class="scoreTableWrap" id="scoreEditorTable"></div>
+      <div class="scoreEditorActions">
+        <button class="btn secondary" id="restoreScoresBtn" type="button">Vrati zadane ocjene</button>
+        <div class="actions">
+          <button class="btn secondary" id="cancelScoresBtn" type="button">Odustani</button>
+          <button class="btn" id="saveScoresBtn" type="button">Spremi ocjene</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
 
 <script>
   const CATEGORIES = [
@@ -203,7 +318,7 @@
     "VI. kategorija (Laščina)",
   ];
 
-  const SCORES = {
+  const DEFAULT_SCORES = {
     "I. kategorija (Sava 11 i 12)": [5,4,4,5,5,5,5,5,1],
     "II. kategorija (Cvjetno naselje)": [4,5,5,4,5,3,4,4,2],
     "III. kategorija (Sava novi paviljoni)": [3,5,3,4,5,5,5,4,3],
@@ -219,11 +334,38 @@
   };
 
   const OPTIONS = Object.keys(WEIGHTS);
+  const SCORE_STORAGE_KEY = "studentski-domovi-ocjene-v1";
 
   const form = document.getElementById("form");
   const statusEl = document.getElementById("status");
   const winnerBox = document.getElementById("winnerBox");
   const tableWrap = document.getElementById("tableWrap");
+  const scoreDialog = document.getElementById("scoreDialog");
+  const scoreEditorTable = document.getElementById("scoreEditorTable");
+  let scores = loadScores();
+  let hasCalculated = false;
+
+  function cloneDefaultScores(){
+    return Object.fromEntries(DORMS.map(dorm => [dorm, [...DEFAULT_SCORES[dorm]]]));
+  }
+
+  function isValidScores(value){
+    return value && DORMS.every(dorm =>
+      Array.isArray(value[dorm]) &&
+      value[dorm].length === CATEGORIES.length &&
+      value[dorm].every(score => Number.isInteger(score) && score >= 1 && score <= 5)
+    );
+  }
+
+  function loadScores(){
+    try {
+      const saved = JSON.parse(localStorage.getItem(SCORE_STORAGE_KEY));
+      if (isValidScores(saved)) return saved;
+    } catch (error) {
+      console.warn("Spremljene ocjene nije bilo moguće učitati.", error);
+    }
+    return cloneDefaultScores();
+  }
 
   // build form
   const selects = [];
@@ -291,12 +433,111 @@
     tableWrap.appendChild(table);
   }
 
-  function calculate(){
+  function renderScoreEditor(values = scores){
+    const table = document.createElement("table");
+    table.className = "scoreTable";
+
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    const dormHeader = document.createElement("th");
+    dormHeader.scope = "col";
+    dormHeader.textContent = "Dom";
+    headerRow.appendChild(dormHeader);
+
+    CATEGORIES.forEach(category => {
+      const th = document.createElement("th");
+      th.scope = "col";
+      th.textContent = category;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    DORMS.forEach((dorm, dormIndex) => {
+      const row = document.createElement("tr");
+      const dormCell = document.createElement("td");
+      dormCell.textContent = dorm;
+      row.appendChild(dormCell);
+
+      CATEGORIES.forEach((category, categoryIndex) => {
+        const cell = document.createElement("td");
+        const input = document.createElement("input");
+        input.className = "scoreInput";
+        input.type = "number";
+        input.min = "1";
+        input.max = "5";
+        input.step = "1";
+        input.required = true;
+        input.value = values[dorm][categoryIndex];
+        input.dataset.dormIndex = dormIndex;
+        input.dataset.categoryIndex = categoryIndex;
+        input.setAttribute("aria-label", `${dorm}: ${category}`);
+        cell.appendChild(input);
+        row.appendChild(cell);
+      });
+
+      tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+    scoreEditorTable.replaceChildren(table);
+  }
+
+  function openScoreEditor(){
+    renderScoreEditor();
+    scoreDialog.showModal();
+  }
+
+  function readScoreEditor(){
+    const updated = cloneDefaultScores();
+    const inputs = [...scoreEditorTable.querySelectorAll(".scoreInput")];
+    let isValid = true;
+
+    inputs.forEach(input => {
+      const value = Number(input.value);
+      if (!Number.isInteger(value) || value < 1 || value > 5){
+        isValid = false;
+        return;
+      }
+      const dorm = DORMS[Number(input.dataset.dormIndex)];
+      const categoryIndex = Number(input.dataset.categoryIndex);
+      updated[dorm][categoryIndex] = value;
+    });
+
+    if (!isValid){
+      const invalidInput = inputs.find(input => !input.checkValidity());
+      invalidInput?.reportValidity();
+      return null;
+    }
+    return updated;
+  }
+
+  function saveScores(){
+    const updated = readScoreEditor();
+    if (!updated) return;
+
+    scores = updated;
+    try {
+      localStorage.setItem(SCORE_STORAGE_KEY, JSON.stringify(scores));
+      statusEl.textContent = "Ocjene su spremljene u ovom pregledniku.";
+    } catch (error) {
+      console.warn("Ocjene nije bilo moguće trajno spremiti.", error);
+      statusEl.textContent = "Ocjene su primijenjene, ali ih preglednik nije mogao trajno spremiti.";
+    }
+    scoreDialog.close();
+    if (hasCalculated) calculate("Ocjene su spremljene i rezultat je ažuriran.");
+  }
+
+  function restoreDefaultScores(){
+    renderScoreEditor(cloneDefaultScores());
+  }
+
+  function calculate(message = "Izračunato."){
     const weights = getWeights();
     const totals = {};
 
     DORMS.forEach(d => {
-      const scs = SCORES[d];
+      const scs = scores[d];
       let s = 0;
       for(let i=0;i<scs.length;i++){
         s += scs[i] * weights[i];
@@ -317,7 +558,8 @@
     `;
 
     renderTable(dense);
-    statusEl.textContent = "Izračunato.";
+    statusEl.textContent = message;
+    hasCalculated = true;
   }
 
   function reset(){
@@ -329,10 +571,18 @@
     `;
     tableWrap.className = "empty";
     tableWrap.textContent = "Rang-lista se prikaže nakon izračuna.";
+    hasCalculated = false;
   }
 
-  document.getElementById("calcBtn").addEventListener("click", calculate);
+  document.getElementById("calcBtn").addEventListener("click", () => calculate());
   document.getElementById("resetBtn").addEventListener("click", reset);
+  document.getElementById("editScoresBtn").addEventListener("click", openScoreEditor);
+  document.getElementById("cancelScoresBtn").addEventListener("click", () => scoreDialog.close());
+  document.getElementById("saveScoresBtn").addEventListener("click", saveScores);
+  document.getElementById("restoreScoresBtn").addEventListener("click", restoreDefaultScores);
+  scoreDialog.addEventListener("click", event => {
+    if (event.target === scoreDialog) scoreDialog.close();
+  });
 </script>
 </body>
 </html>
