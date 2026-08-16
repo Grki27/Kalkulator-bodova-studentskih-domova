@@ -235,6 +235,131 @@
         width: 100%;
       }
     }
+    @media (max-width: 900px){
+      dialog{
+        width: calc(100% - 16px);
+        max-height: calc(100vh - 16px);
+        max-height: calc(100dvh - 16px);
+      }
+      .scoreEditor{
+        max-height: calc(100vh - 16px);
+        max-height: calc(100dvh - 16px);
+      }
+      .scoreEditorHeader{
+        padding: 14px 14px 12px;
+      }
+      .scoreTableWrap{
+        padding: 12px;
+        background: #faf7f9;
+      }
+      .scoreTable{
+        min-width: 0;
+        border: 0;
+        border-radius: 0;
+        overflow: visible;
+      }
+      .scoreTable thead{
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      .scoreTable tbody{
+        display: grid;
+        gap: 12px;
+      }
+      .scoreTable tbody tr{
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        overflow: hidden;
+        border: 1px solid #eee;
+        border-radius: 12px;
+        background: #fff;
+      }
+      .scoreTable tbody td,
+      .scoreTable tbody td:first-child{
+        position: static;
+        display: grid;
+        grid-column: 1 / -1;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        width: auto;
+        min-width: 0;
+        padding: 8px 12px;
+        text-align: left;
+        background: #fff;
+        border-bottom: 1px solid #f1f1f1;
+      }
+      .scoreTable tbody td:first-child{
+        display: block;
+        padding: 11px 12px;
+        font-weight: 700;
+        line-height: 1.35;
+        background: #faf7f9;
+      }
+      .scoreTable tbody td:not(:first-child)::before{
+        content: attr(data-label);
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.25;
+      }
+      .scoreTable tbody td:last-child{ border-bottom: 0; }
+      .scoreInput{
+        width: 72px;
+        min-height: 40px;
+        font-size: 16px;
+      }
+      .scoreEditorActions{
+        padding: 10px 12px 12px;
+      }
+    }
+    @media (max-width: 600px){
+      .wrap{
+        padding: 10px;
+        gap: 10px;
+      }
+      .card{
+        padding: 14px;
+        border-radius: 12px;
+      }
+      .spacedCard{ margin-top: 10px; }
+      h1{
+        font-size: 24px;
+        line-height: 1.15;
+      }
+      .grid{
+        grid-template-columns: 1fr;
+        gap: 7px;
+      }
+      .grid .label:not(:first-child){ margin-top: 6px; }
+      .select{
+        width: 100%;
+        min-height: 44px;
+        font-size: 16px;
+      }
+      .mainActions{
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+      .mainActions .btn{ min-height: 44px; }
+      .winner .meta{ line-height: 1.4; }
+      tbody td,
+      thead th{
+        padding-left: 8px;
+        padding-right: 8px;
+      }
+      td.num,
+      th.num{ width: 42px; }
+      td.score,
+      th.score{ width: 76px; }
+    }
   </style>
 </head>
 <body>
@@ -254,7 +379,7 @@
         <div class="sectionTitle">Stavke</div>
         <div id="form" class="grid"></div>
 
-        <div class="actions">
+        <div class="actions mainActions">
           <button class="btn" id="calcBtn" type="button">Izračunaj</button>
           <button class="btn secondary" id="resetBtn" type="button">Reset</button>
           <button class="btn secondary" id="editScoresBtn" type="button">Promijeni ocjene</button>
@@ -462,6 +587,7 @@
 
       CATEGORIES.forEach((category, categoryIndex) => {
         const cell = document.createElement("td");
+        cell.dataset.label = category;
         const input = document.createElement("input");
         input.className = "scoreInput";
         input.type = "number";
